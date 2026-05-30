@@ -30,12 +30,68 @@ export default function WorkbookActivity({ onPrint }: WorkbookActivityProps) {
   const lineCount = content.split("\n").filter(l => l.trim().length > 0).length;
   const wordCount = content.trim().length;
 
+  const handleDiscussionChange = (index: number, val: string) => {
+    const updated = [...discussions];
+    updated[index] = val;
+    setDiscussions(updated);
+  };
+
   // Insert template content helper
   const handleLoadSample = () => {
-    setTitle("평화와 역사적 진실의 등대, 주권이 살  return (
-    <div className="space-y-8 animate-fade-in print-area">
+    setTitle("평화와 역사적 진실의 등대, 주권이 살아있는 동아시아 공동의 독도");
+    setContent(
+      "동해의 평화로운 섬 독도는 객관적 사료를 통해 그 역사적 지위가 분명히 규명된다. 한국의 고문서인 『세종실록지리지(1454년)』에는 울릉도와 독도가 맑은 날 육안으로 관측 가능하다고 하여 조선 왕조의 생활권이었음을 시각적으로 명시하고 있다. 또한, 일본의 역사적 고공무서이자 메이지 정부의 최고 결정 기관에서 내린 『태정관 지령(1877년)』에서도 울릉도와 독도가 일본과 무관한 조선의 영토임을 스스로 인지하고 이를 명문화하여 엄격히 하달하였다. 오늘날 현대 배타적 경제수역(EEZ)의 중간 수역 마찰을 평화적 상호 이해로 이결하고, 양국 미래 세대가 협력하는 번영의 동해 바다로 일구어 가야 한다."
+    );
+    setDiscussions([
+      "태정관 지령은 일본 최고 국가기구 스스로 독도와 울릉도를 '조선의 영역'으로 공치 확정하고 자국 관할권에서 확실하게 배제한 공식 공문서이므로, 현대 일본 외무성의 역사 왜곡 주장(에도 시대부터 자국 인지)을 원천 무효화시키는 가장 양심적이고 철저한 반박 기록이기 때문입니다.",
+      "외교적 난제로 영토 기점 합의가 평행선을 달리자 국가 공권력은 일단 무역과 실제 어업 조업 구역을 지키기 위해 타협 임시 공동 수역인 '중간수역'을 획정했습니다. 영유권 문제 선점을 일단 미룬 임시방편이었기에 국내적으로 거센 비판과 영토 훼손 우려를 낳았습니다.",
+      "정치적이고 편향된 내셔널리즘 자극 대립에서 벗어나, 양국 실증 역사 기록과 공동 관심사, 평화 화합을 직접 토론하고 배우는 기회를 넓혀야만 미래의 성숙하고 평화로운 동아시아 상생 공동체를 선도할 수 있기 때문입니다."
+    ]);
+  };
+
+  const handleEvaluate = async () => {
+    if (!content || content.trim().length === 0) {
+      setErrorMsg("교과서 서술문 내용을 입력해주세요.");
+      return;
+    }
+
+    setIsEvaluating(true);
+    setEvaluation(null);
+    setErrorMsg(null);
+
+    try {
+      const response = await fetch("/api/evaluate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          names,
+          title,
+          content,
+          discussions,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setEvaluation(data);
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(err.message || "평가 처리 도중 에러가 발생했습니다.");
+    } finally {
+      setIsEvaluating(false);
+    }
+  };
+
+  return (
+    <div className="space-y-8 animate-fade-in print-area text-slate-200">
       {/* Activity Intro Banner */}
-      <div className="bg-white/5 backdrop-blur-2xl p-6 md:p-8 rounded-[32px] border border-white/10 shadow-2xl print:hidden text-slate-200">
+      <div className="bg-white/5 backdrop-blur-2xl p-6 md:p-8 rounded-[32px] border border-white/10 shadow-2xl print:hidden">
         <div className="max-w-3xl">
           <div className="flex items-center gap-2 text-blue-400 font-bold text-xs uppercase tracking-wider">
             <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
@@ -81,6 +137,7 @@ export default function WorkbookActivity({ onPrint }: WorkbookActivityProps) {
               학습자 집필 및 성찰 필드
             </h3>
             <button
+               type="button"
               onClick={handleLoadSample}
               className="text-[11px] bg-white/10 hover:bg-white/20 text-white font-bold px-3 py-1.5 rounded-lg border border-white/10 transition-all cursor-pointer print:hidden"
             >
@@ -141,16 +198,16 @@ export default function WorkbookActivity({ onPrint }: WorkbookActivityProps) {
           {/* Core Discussion Questions */}
           <div className="pt-6 border-t border-white/5 space-y-5">
             <h4 className="text-xs font-extrabold text-slate-450 uppercase tracking-widest font-mono">
-              [4.2] 토론 및 개별 성찰 질문 응해 응답 작성지
+              토론 및 개별 성찰 질문 답변 작성지
             </h4>
 
             {/* Question 1 */}
             <div className="space-y-2">
               <p className="text-xs font-bold text-slate-250 leading-relaxed">
-                Q1. 일본의 1877년 『태정관 지령』과 첨부된 『기죽도약도』가 현대 일본의 "에도시대 독도 영유" 주장을 무력화하는 결정적 근거가 되는 이유는 무엇인가요?
+                Q1. 일본의 1877년 『태정관 지령』과 첨부된 『기죽도약도』가 현대 일본의 \"에도시대 독도 영유\" 주장을 무력화하는 결정적 근거가 되는 이유는 무엇인가요?
               </p>
               <textarea
-                value={discussions[0]}
+                value={discussions[0] || ""}
                 onChange={(e) => handleDiscussionChange(0, e.target.value)}
                 rows={3}
                 className="w-full border border-white/10 bg-white/5 p-3 rounded-xl text-xs text-slate-200 leading-normal focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40 font-sans"
@@ -164,7 +221,7 @@ export default function WorkbookActivity({ onPrint }: WorkbookActivityProps) {
                 Q2. 1998년 체결된 '신한일어업협정'에서 왜 독도가 한국의 독자적 EEZ 기점이 되지 못하고 중간수역에 놓이게 되었는지, 당시 배경과 어업권 보호 측면에서 서술하세요.
               </p>
               <textarea
-                value={discussions[1]}
+                value={discussions[1] || ""}
                 onChange={(e) => handleDiscussionChange(1, e.target.value)}
                 rows={3}
                 className="w-full border border-white/10 bg-white/5 p-3 rounded-xl text-xs text-slate-200 leading-normal focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40 font-sans"
@@ -178,7 +235,7 @@ export default function WorkbookActivity({ onPrint }: WorkbookActivityProps) {
                 Q3. 미래 청소년들이 중심이 되어 갈등을 평화적으로 연쇄 해결하기 위해 한일 역사 캠프나 학술적 교류가 절실한 지점에 대해 본인 사견을 쓰세요.
               </p>
               <textarea
-                value={discussions[2]}
+                value={discussions[2] || ""}
                 onChange={(e) => handleDiscussionChange(2, e.target.value)}
                 rows={3}
                 className="w-full border border-white/10 bg-white/5 p-3 rounded-xl text-xs text-slate-200 leading-normal focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40 font-sans"
@@ -218,8 +275,8 @@ export default function WorkbookActivity({ onPrint }: WorkbookActivityProps) {
           {!isEvaluating && !evaluation && (
             <div className="bg-white/3 border border-dashed border-white/10 rounded-3xl p-8 text-center h-full flex flex-col justify-center items-center min-h-[350px] print:hidden">
               <Award className="w-12 h-12 text-slate-500 animate-bounce" />
-              <h4 className="text-sm font-extrabold text-white mt-4">평가위원회 성적표 대기 중</h4>
-              <p className="text-xs text-slate-400 mt-2 max-w-[260px] leading-relaxed mx-auto text-center">
+              <h4 className="text-sm font-extrabold text-white mt-4 font-serif">평가위원회 성적표 대기 중</h4>
+              <p className="text-xs text-slate-400 mt-2 max-w-[260px] leading-relaxed mx-auto text-center font-sans">
                 교과서 집필문과 하단 성찰 질의들을 성실히 작성한 후 제출하시면, 대한민국 역사·지리 평화교육위원회 심사관들이 즉시 실시간 배점과 교안 피드백을 전달해 드립니다.
               </p>
             </div>
@@ -330,74 +387,6 @@ export default function WorkbookActivity({ onPrint }: WorkbookActivityProps) {
           {errorMsg && (
             <div className="bg-rose-500/5 border border-rose-500/25 text-rose-300 rounded-xl p-4 flex items-start gap-2.5 text-xs font-medium print:hidden">
               <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
-              <div>
-                <strong>상정 오류:</strong> {errorMsg}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>�� 서양 집필 등급 책정</h4>
-                  <p className="text-[11px] leading-relaxed text-slate-500 mt-0.5">
-                    공인된 고전 사료를 적확하게 고찰했으며, 양국 간 불필요한 감정 자극 없이 미래지향적인 평화 정착 어조를 우수하게 완결 지었습니다.
-                  </p>
-                </div>
-              </div>
-
-              {/* Main Feedback Narrative */}
-              <div>
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1 block">심사 및 보완 총평</span>
-                <p className="text-xs leading-relaxed text-slate-800 bg-slate-50 p-4 border border-slate-200/80 rounded-md mt-2 font-medium whitespace-pre-wrap font-serif">
-                  {evaluation.feedback}
-                </p>
-              </div>
-
-              {/* Suggestions checklist */}
-              <div className="space-y-3 pb-2">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1 block">주요 핵심 교정 및 실천 제안</span>
-                <div className="space-y-2.5 mt-2">
-                  {evaluation.suggestions.map((sug, idx) => (
-                    <div key={idx} className="flex items-start gap-2 text-xs text-slate-700 font-medium">
-                      <CheckSquare className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                      <span>{sug}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Signature block matching '평가위원 의견 및 서명' */}
-              <div className="border-t border-slate-200 pt-5 flex items-center justify-between pb-1">
-                <div>
-                  <span className="text-[10px] text-slate-400 uppercase tracking-widest font-mono">평가 심의관</span>
-                  <p className="text-sm font-serif font-extrabold text-slate-900 leading-tight mt-0.5">{evaluation.signature}</p>
-                </div>
-
-                {/* Hand-written signature graphic stamp */}
-                <div className="border border-red-500/80 rounded px-2.5 py-1 text-red-650 bg-red-50/50 transform rotate-[-2deg] font-serif font-bold text-[10px] uppercase tracking-wider relative shrink-0 shadow-sm shadow-red-100 select-none">
-                  <div className="absolute inset-0 border border-dashed border-red-300"></div>
-                  <span>평화지적 심사필 (인)</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Printable visual block with complete information once submitted */}
-          {evaluation && (
-            <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg flex items-start gap-2.5 print:hidden">
-              <CheckCircle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-              <div>
-                <h5 className="text-xs font-bold text-blue-900">공동서 완결 보고서 출력 가능</h5>
-                <p className="text-[11px] leading-relaxed text-slate-650 mt-1">
-                  제출 및 서명된 본 활동지는 상단 '교안 인쇄' 버튼을 통해 서식과 점수, 성찰 일지가 수록된 공식 수업 산출물 형태의 리포트로 완벽히 인쇄하여 오프라인으로 수거할 수 있습니다.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Fail error panel */}
-          {errorMsg && (
-            <div className="bg-rose-50 border border-rose-200 text-rose-900 rounded-lg p-4 flex items-start gap-2.5 text-xs font-medium print:hidden">
-              <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
               <div>
                 <strong>상정 오류:</strong> {errorMsg}
               </div>
