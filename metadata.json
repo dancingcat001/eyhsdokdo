@@ -1,0 +1,6 @@
+{
+  "name": "독도 주권 교육 종합 워크북",
+  "description": "지리적 특성, 역사적 사료 및 한일 갈등의 이해와 한·일 평화 공동 교과서 집필 체험을 지원하는 중·고등용 역사 및 지리 융합 교육 종합 워크북입니다.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
