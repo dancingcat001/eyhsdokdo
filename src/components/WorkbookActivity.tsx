@@ -26,6 +26,14 @@ export default function WorkbookActivity({ onPrint }: WorkbookActivityProps) {
   const [evaluation, setEvaluation] = useState<EvaluationResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // States for Auto Reflection Feature
+  const [showReflectionHelper, setShowReflectionHelper] = useState<boolean>(false);
+  const [reflectionKeywords, setReflectionKeywords] = useState<string>("독도, 태정관지령, 한일 미래교류, 평화공존");
+  const [isGeneratingReflection, setIsGeneratingReflection] = useState<boolean>(false);
+  const [generatedReflection, setGeneratedReflection] = useState<string>("");
+  const [reflectionError, setReflectionError] = useState<string | null>(null);
+  const [copiedReflection, setCopiedReflection] = useState<boolean>(false);
+
   // Line count stats
   const lineCount = content.split("\n").filter(l => l.trim().length > 0).length;
   const wordCount = content.trim().length;
@@ -34,6 +42,61 @@ export default function WorkbookActivity({ onPrint }: WorkbookActivityProps) {
     const updated = [...discussions];
     updated[index] = val;
     setDiscussions(updated);
+  };
+
+  // Auto Reflection handler
+  const handleGenerateReflection = async () => {
+    if (!reflectionKeywords.trim()) {
+      setReflectionError("키워드를 입력해 주세요.");
+      return;
+    }
+    setIsGeneratingReflection(true);
+    setReflectionError(null);
+    setGeneratedReflection("");
+    setCopiedReflection(false);
+
+    try {
+      const response = await fetch("/api/generate-reflection", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ keywords: reflectionKeywords }),
+      });
+
+      if (!response.ok) {
+        throw new Error("서버와의 통신에 실패했습니다.");
+      }
+
+      const data = await response.json();
+      if (data.reflection) {
+        setGeneratedReflection(data.reflection);
+      } else if (data.error) {
+        throw new Error(data.error);
+      } else {
+        throw new Error("소감문 생성에 실패했습니다.");
+      }
+    } catch (err: any) {
+      setReflectionError(err.message || "소감문 생성 중 에러가 발생했습니다.");
+    } finally {
+      setIsGeneratingReflection(false);
+    }
+  };
+
+  const handleInsertToQ3 = () => {
+    if (generatedReflection) {
+      const updated = [...discussions];
+      updated[2] = generatedReflection;
+      setDiscussions(updated);
+    }
+  };
+
+  const handleCopyToClipboard = () => {
+    if (generatedReflection) {
+      navigator.clipboard.writeText(generatedReflection);
+      setCopiedReflection(true);
+      setTimeout(() => setCopiedReflection(false), 2000);
+    }
   };
 
   // Insert template content helper
@@ -241,6 +304,100 @@ export default function WorkbookActivity({ onPrint }: WorkbookActivityProps) {
                 className="w-full border border-white/10 bg-white/5 p-3 rounded-xl text-xs text-slate-200 leading-normal focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40 font-sans"
                 placeholder="답변을 입력하십시오"
               />
+              
+              {/* Write Reflection Button */}
+              <div className="flex justify-end pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowReflectionHelper(!showReflectionHelper)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 rounded-lg border border-blue-500/20 transition-all cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  소감문 작성하기 (AI 자동 완성)
+                </button>
+              </div>
+
+              {/* Reflection Helper Drawer/Panel */}
+              {showReflectionHelper && (
+                <div className="mt-4 bg-white/3 border border-white/10 p-4 rounded-2xl space-y-4 animate-fade-in text-slate-200">
+                  <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                    <h5 className="text-xs font-extrabold text-blue-300 inline-flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      AI 배움 소감문 작문 시스템
+                    </h5>
+                    <button
+                      type="button"
+                      onClick={() => setShowReflectionHelper(false)}
+                      className="text-[10px] text-slate-400 hover:text-white transition-colors"
+                    >
+                      닫기
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-[11px] text-slate-400 font-semibold pl-0.5">
+                      소감문 및 성찰을 이끌어낼 주요 키워드 입력 :
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={reflectionKeywords}
+                        onChange={(e) => setReflectionKeywords(e.target.value)}
+                        placeholder="예) 독도, 우호, 역사기록, 태정관지령, 평화공존"
+                        className="flex-1 border border-white/10 bg-white/5 px-3 py-2 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40 font-sans"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleGenerateReflection}
+                        disabled={isGeneratingReflection}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold text-white transition-all cursor-pointer ${
+                          isGeneratingReflection 
+                            ? "bg-slate-700 cursor-not-allowed" 
+                            : "bg-blue-600 hover:bg-blue-500"
+                        }`}
+                      >
+                        {isGeneratingReflection ? "작성 중..." : "글짓기 생성"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Reflection error display */}
+                  {reflectionError && (
+                    <div className="text-[11px] text-rose-450 bg-rose-500/5 p-2 rounded-lg border border-rose-500/10">
+                      ⚠️ {reflectionError}
+                    </div>
+                  )}
+
+                  {/* Reflection output block */}
+                  {generatedReflection && (
+                    <div className="space-y-3 bg-white/5 p-3.5 border border-white/10 rounded-xl">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block pl-0.5">
+                        작성 완료된 소감문 추천안:
+                      </span>
+                      <p className="text-xs text-slate-200 leading-relaxed font-serif whitespace-pre-wrap select-all bg-white/2 p-3 rounded-lg border border-white/5 shadow-inner">
+                        {generatedReflection}
+                      </p>
+                      <div className="flex gap-2 justify-end">
+                        <button
+                          type="button"
+                          onClick={handleCopyToClipboard}
+                          className="px-2.5 py-1.5 text-[11px] font-bold text-slate-300 bg-white/10 hover:bg-white/15 rounded-lg border border-white/10 transition-all cursor-pointer"
+                        >
+                          {copiedReflection ? "✓ 복사완료!" : "클립보드 복사"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleInsertToQ3}
+                          className="px-2.5 py-1.5 text-[11px] font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-lg shadow-md hover:shadow-blue-500/10 transition-all cursor-pointer flex items-center gap-1.5"
+                        >
+                          <CheckCircle className="w-3.5 h-3.5" />
+                          Q3 답변으로 삽입하기
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
